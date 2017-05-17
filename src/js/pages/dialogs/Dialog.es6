@@ -63,7 +63,6 @@ export default class Dialog extends React.Component {
     )
   }
 
-
   renderCloseButton() {
     return (
        <button className="dialog-closeButton" onClick={::this.onClickClose}><IconFont iconName="cancel" /></button>

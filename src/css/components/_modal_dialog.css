@@ -78,6 +78,42 @@
       color: $colorAccentLighter;
     }
   }
+
+  .dialog-prevButton {
+    position: absolute;
+    z-index: 1;
+    border: 0;
+    background: transparent;
+
+    top: 50%;
+    left: -32px;
+
+    font-size: 2rem;
+    color: #fff;
+    text-shadow: 0 0 4px #444;
+
+    &:hover {
+      color: $colorAccentLighter;
+    }
+  }
+
+  .dialog-nextButton {
+    position: absolute;
+    z-index: 1;
+    border: 0;
+    background: transparent;
+
+    top: 50%;
+    right: -32px;
+
+    font-size: 2rem;
+    color: #fff;
+    text-shadow: 0 0 4px #444;
+
+    &:hover {
+      color: $colorAccentLighter;
+    }
+  }
 }
 
 

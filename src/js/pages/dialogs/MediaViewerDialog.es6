@@ -1,26 +1,56 @@
 import React from 'react'
 
 import Dialog from './Dialog'
+import {IconFont} from 'src/pages/parts'
 
 
 /**
  * メディア表示ダイアログ
  */
 export default class MediaViewerDialog extends Dialog {
+  constructor(...args) {
+    super(...args)
+
+    const {media} = this.props
+    this.state = {
+      media,
+    }
+  }
+
   /**
    * @override
    */
   render() {
-    const {media} = this.props
+    const {media} = this.state
 
     return (
       <div className={`${this.dialogClassName} dialog--mediaViewer--${media.type}`}>
         {this.renderCloseButton()}
+        {this.hasPrev && this.renderPrevButton()}
+        {this.hasNext && this.renderNextButton()}
         {media.type === 'image'
           ? this.renderImage(media)
           : this.renderVideo(media)
         }
       </div>
+    )
+  }
+
+  renderPrevButton() {
+    // TODO: replace icon
+    return (
+      <button className="dialog-prevButton" onClick={::this.onClickPrev}>
+        <IconFont iconName="cancel" />
+      </button>
+    )
+  }
+
+  renderNextButton() {
+    // TODO: replace icon
+    return (
+      <button className="dialog-nextButton" onClick={::this.onClickNext}>
+        <IconFont iconName="cancel" />
+      </button>
     )
   }
 
@@ -44,6 +74,20 @@ export default class MediaViewerDialog extends Dialog {
     )
   }
 
+  onClickPrev() {
+    const {mediaList} = this.props
+    const media = mediaList[this.currentIdx - 1]
+
+    this.setState({media})
+  }
+
+  onClickNext() {
+    const {mediaList} = this.props
+    const media = mediaList[this.currentIdx + 1]
+
+    this.setState({media})
+  }
+
   /**
    * @override
    * @private
@@ -51,5 +95,25 @@ export default class MediaViewerDialog extends Dialog {
    */
   get dialogClassName() {
     return super.dialogClassName + ' dialog--mediaViewer'
+  }
+
+  // private
+  get currentIdx() {
+    const {mediaList} = this.props
+    const {media} = this.state
+
+    return mediaList.findIndex((m) => {
+      return m.id === media.id
+    })
+  }
+
+  get hasPrev() {
+    return this.currentIdx !== 0
+  }
+
+  get hasNext() {
+    const {mediaList} = this.props
+
+    return this.currentIdx !== mediaList.length - 1
   }
 }
