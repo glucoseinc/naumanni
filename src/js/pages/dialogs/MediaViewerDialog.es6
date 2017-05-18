@@ -11,9 +11,10 @@ export default class MediaViewerDialog extends Dialog {
   constructor(...args) {
     super(...args)
 
-    const {media} = this.props
+    const currentIdx = this.getCursor()
+
     this.state = {
-      media,
+      currentIdx,
     }
   }
 
@@ -21,7 +22,9 @@ export default class MediaViewerDialog extends Dialog {
    * @override
    */
   render() {
-    const {media} = this.state
+    const {mediaList} = this.props
+    const {currentIdx} = this.state
+    const media = mediaList[currentIdx]
 
     return (
       <div className={`${this.dialogClassName} dialog--mediaViewer--${media.type}`}>
@@ -75,17 +78,19 @@ export default class MediaViewerDialog extends Dialog {
   }
 
   onClickPrev() {
-    const {mediaList} = this.props
-    const media = mediaList[this.currentIdx - 1]
+    const {currentIdx} = this.state
 
-    this.setState({media})
+    this.setState({
+      currentIdx: currentIdx - 1,
+    })
   }
 
   onClickNext() {
-    const {mediaList} = this.props
-    const media = mediaList[this.currentIdx + 1]
+    const {currentIdx} = this.state
 
-    this.setState({media})
+    this.setState({
+      currentIdx: currentIdx + 1,
+    })
   }
 
   /**
@@ -98,9 +103,8 @@ export default class MediaViewerDialog extends Dialog {
   }
 
   // private
-  get currentIdx() {
-    const {mediaList} = this.props
-    const {media} = this.state
+  getCursor() {
+    const {media, mediaList} = this.props
 
     return mediaList.findIndex((m) => {
       return m.id === media.id
@@ -108,12 +112,15 @@ export default class MediaViewerDialog extends Dialog {
   }
 
   get hasPrev() {
-    return this.currentIdx !== 0
+    const {currentIdx} = this.state
+
+    return currentIdx !== 0
   }
 
   get hasNext() {
     const {mediaList} = this.props
+    const {currentIdx} = this.state
 
-    return this.currentIdx !== mediaList.length - 1
+    return currentIdx !== mediaList.length - 1
   }
 }
