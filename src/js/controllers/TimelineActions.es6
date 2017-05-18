@@ -5,6 +5,7 @@ import {
 } from 'src/constants'
 import TimelineData, {postStatusManaged} from 'src/infra/TimelineData'
 import PushDialogUseCase from 'src/usecases/PushDialogUseCase'
+import {UIDialog} from 'src/models'
 
 
 export const TimelineActionPropTypes = {
@@ -73,8 +74,13 @@ export default class TimelineActions {
   }
 
   onClickMedia(mediaList, cursor) {
+    const media = mediaList[cursor]
+    const params = {media}
+
+    params.mediaList = mediaList
+
     this.context.useCase(
       new PushDialogUseCase()
-    ).execute(DIALOG_MEDIA_VIEWER, mediaList, cursor)
+    ).execute(DIALOG_MEDIA_VIEWER, params)
   }
 }

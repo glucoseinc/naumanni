@@ -1,6 +1,7 @@
 import {UseCase} from 'almin'
 
 import * as actions from 'src/actions'
+import {UIDialog} from 'src/models'
 
 /**
  * ダイアログを追加するUseCase
@@ -12,16 +13,13 @@ export default class PushDialogUseCase extends UseCase {
 
   /**
    * @override
-   * @param {string} dialogType
-   * @param {object} mediaList
-   * @param {object} cursor
+   * @param {string} type
+   * @param {object} params
    */
-  async execute(dialogType, mediaList, cursor) {
+  async execute(type, params) {
     this.dispatch({
       type: actions.DIALOG_PUSH_REQUESTED,
-      dialogType,
-      mediaList,
-      cursor,
+      dialog: new UIDialog(type, params),
     })
   }
 }
