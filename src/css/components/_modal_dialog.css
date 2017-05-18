@@ -61,14 +61,11 @@
     }
   }
 
-  .dialog-closeButton {
+  .dialog-button {
     position: absolute;
     z-index: 1;
     border: 0;
     background: transparent;
-
-    top: -12px;
-    right: -32px;
 
     font-size: 2rem;
     color: #fff;
@@ -77,41 +74,20 @@
     &:hover {
       color: $colorAccentLighter;
     }
-  }
 
-  .dialog-prevButton {
-    position: absolute;
-    z-index: 1;
-    border: 0;
-    background: transparent;
-
-    top: 50%;
-    left: -32px;
-
-    font-size: 2rem;
-    color: #fff;
-    text-shadow: 0 0 4px #444;
-
-    &:hover {
-      color: $colorAccentLighter;
+    &-close {
+      top: -12px;
+      right: -32px;
     }
-  }
 
-  .dialog-nextButton {
-    position: absolute;
-    z-index: 1;
-    border: 0;
-    background: transparent;
+    &-prev {
+      top: 50%;
+      left: -32px;
+    }
 
-    top: 50%;
-    right: -32px;
-
-    font-size: 2rem;
-    color: #fff;
-    text-shadow: 0 0 4px #444;
-
-    &:hover {
-      color: $colorAccentLighter;
+    &-next {
+      top: 50%;
+      right: -32px;
     }
   }
 }
