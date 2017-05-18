@@ -42,7 +42,7 @@ export default class MediaViewerDialog extends Dialog {
   renderPrevButton() {
     // TODO: replace with icon
     return (
-      <button className="dialog-button dialog-button-prev" onClick={::this.onClickPrev}>
+      <button className="dialog-button dialog-button--prev" onClick={::this.onClickPrev}>
         {'<'}
       </button>
     )
@@ -51,7 +51,7 @@ export default class MediaViewerDialog extends Dialog {
   renderNextButton() {
     // TODO: replace with icon
     return (
-      <button className="dialog-button dialog-button-next" onClick={::this.onClickNext}>
+      <button className="dialog-button dialog-button--next" onClick={::this.onClickNext}>
         {'>'}
       </button>
     )
