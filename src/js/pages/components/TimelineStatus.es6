@@ -410,10 +410,10 @@ export default class TimelineStatus extends React.Component {
     })
   }
 
-  onClickMedia(mediaList, cursor, e) {
+  onClickMedia(mediaList, idx, e) {
     e.preventDefault()
 
-    this.props.onClickMedia(mediaList, cursor)
+    this.props.onClickMedia(mediaList, idx)
   }
 
   /**

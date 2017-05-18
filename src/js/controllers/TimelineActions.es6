@@ -73,14 +73,9 @@ export default class TimelineActions {
     return TimelineData.mergeStatuses(entities, [result])[0]
   }
 
-  onClickMedia(mediaList, cursor) {
-    const media = mediaList[cursor]
-    const params = {media}
-
-    params.mediaList = mediaList
-
+  onClickMedia(mediaList, idx) {
     this.context.useCase(
       new PushDialogUseCase()
-    ).execute(DIALOG_MEDIA_VIEWER, params)
+    ).execute(DIALOG_MEDIA_VIEWER, {mediaList, initialIdx: idx})
   }
 }

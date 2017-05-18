@@ -11,10 +11,10 @@ export default class MediaViewerDialog extends Dialog {
   constructor(...args) {
     super(...args)
 
-    const currentIdx = this.getCursor()
+    const {initialIdx} = this.props
 
     this.state = {
-      currentIdx,
+      currentIdx: initialIdx,
     }
   }
 
@@ -103,14 +103,6 @@ export default class MediaViewerDialog extends Dialog {
   }
 
   // private
-  getCursor() {
-    const {media, mediaList} = this.props
-
-    return mediaList.findIndex((m) => {
-      return m.id === media.id
-    })
-  }
-
   get hasPrev() {
     const {currentIdx} = this.state
 
