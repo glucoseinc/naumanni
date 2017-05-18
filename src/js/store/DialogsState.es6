@@ -13,7 +13,7 @@ export default class DialogsState {
   reduce(payload) {
     switch(payload.type) {
     case actions.DIALOG_PUSH_REQUESTED:
-      return this.onDialogPushRequested(payload.dialog)
+      return this.onDialogPushRequested(payload)
     case actions.DIALOG_CLOSE_REQUESTED:
       return this.onDialogCloseRequested(payload.dialog)
     case actions.DIALOG_REPLACE_REQUESTED:
@@ -23,7 +23,11 @@ export default class DialogsState {
     }
   }
 
-  onDialogPushRequested(dialog) {
+  onDialogPushRequested({dialogType, mediaList, cursor}) {
+    const media = mediaList[cursor]
+    const params = {media}
+    params.mediaList = mediaList
+    const dialog = new UIDialog(dialogType, params)
     return new DialogsState([...this.dialogs, dialog])
   }
 
