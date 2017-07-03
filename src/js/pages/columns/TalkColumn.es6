@@ -221,6 +221,8 @@ export default class TalkColumn extends Column {
                     hour="2-digit" minute="2-digit" second="2-digit"
                   />
                 </div>
+                {/* TODO: check icon */}
+                <div className="status-sendStatus"><IconFont iconName="doc" /></div>
                 {encrypted && <div className="status-isEncrypted"><IconFont iconName="lock" /></div>}
               </li>
             )
