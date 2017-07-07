@@ -133,6 +133,7 @@ export default class TalkColumn extends Column {
         <div className="talkForm-content">
           <div className="talkForm-status">
             <textarea
+              ref="text"
               value={this.state.newMessage}
               onChange={::this.onChangeMessage}
               onKeyDown={::this.onKeyDownMessage}
@@ -255,14 +256,16 @@ export default class TalkColumn extends Column {
     this.mediaFileCounter = 0
   }
 
+  get message() {
+    return this.state.newMessage.trim()
+  }
 
-  sendMessage() {
-    const message = this.state.newMessage.trim()
-    if(!message) {
-      // cannot send message
-      return
-    }
+  clearMessage() {
+    this.refs.text.value = ''
+    this.setState({newMessage: ''})
+  }
 
+  sendMessage(message) {
     // get latest status id
     let lastStatusId = null
     if(this.state.talk.length) {
@@ -288,7 +291,6 @@ export default class TalkColumn extends Column {
 
         this.setState({
           mediaFiles: [],
-          newMessage: '',
           sendingMessage: false,
         }, () => {
           this.setUpMediaCounter()
@@ -359,7 +361,15 @@ export default class TalkColumn extends Column {
 
     if((e.ctrlKey || e.metaKey) && e.keyCode == KEY_ENTER) {
       e.preventDefault()
-      this.sendMessage()
+
+      const message = this.message
+
+      if(this.state.sendingMessage || !message) {
+        return
+      }
+
+      this.clearMessage()
+      this.sendMessage(message)
     }
   }
 
