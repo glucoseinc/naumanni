@@ -175,6 +175,7 @@ export default class TalkListener extends EventEmitter {
     this.encryptedMessages = {}
 
     this.removeWebsocketListenerHandler = null
+    this.localStatusRemovers = new Map()
   }
 
   updateToken(token) {
@@ -200,6 +201,8 @@ export default class TalkListener extends EventEmitter {
       this.removeWebsocketListenerHandler()
       this.removeWebsocketListenerHandler = null
     }
+
+    this.localStatusRemovers.forEach((remover) => remover())
   }
 
   onChange(cb) {
@@ -333,6 +336,54 @@ export default class TalkListener extends EventEmitter {
     return true
   }
 
+  pushLocalStatus(localStatus) {
+    let mentions = []
+    if(this.statuses.length > 0) {
+      let last
+      let i = this.statuses.length - 1
+
+      // this is for copying last `mentions`
+      while(i && !last) {
+        const status = this.statuses[i].resolve()
+
+        if(status.account === this.me.uri) {
+          last = status
+          break
+        }
+        i -= 1
+      }
+      if(last) {
+        mentions = last.mentions
+      }
+    }
+
+    const statusRef = TimelineData.pushStatus(new Status({
+      ...localStatus.toJS(),
+      mentions,
+    }))
+
+    this.pushStatusesIfMatched([statusRef])
+
+    const {uri} = statusRef.resolve()
+    const remover = TimelineData.decrement.bind(TimelineData, [uri])
+
+    this.localStatusRemovers.set(uri, remover)
+  }
+
+  removeLocalStatus(uri) {
+    const remover = this.localStatusRemovers.get(uri)
+
+    remover()
+
+    this.statuses = this.statuses
+      .filter((status) => status.uri !== uri)
+  }
+
+  replaceLocalStatus(uri, statuses) {
+    this.removeLocalStatus(uri)
+    this.pushStatusesIfMatched(statuses)
+  }
+
   /**
    */
   decryptStatuses() {
@@ -403,6 +454,7 @@ export default class TalkListener extends EventEmitter {
             parsedContent: status.parsedContent,
             createdAt: status.createdAt,
             encrypted: true,
+            sendStatus: status.send_status,
           }
         } else {
           // 冒頭のmentionだけ省く
@@ -424,6 +476,7 @@ export default class TalkListener extends EventEmitter {
             key: status.uri,
             parsedContent: parsedContent,
             createdAt: status.createdAt,
+            sendStatus: status.send_status,
           }
         }
       })

@@ -66,6 +66,11 @@ export const TOKEN_URL = 'url'
 export const TOKEN_MENTION = 'mention'
 export const TOKEN_HASHTAG = 'hashtag'
 
+// Toot send status
+export const TOOT_SEND_SUCCESS = 'success'
+export const TOOT_SEND_PENDING = 'pending'
+export const TOOT_SEND_FAIL = 'fail'
+
 // 最下部からこの位置に来たら、AutoPagingを開始する
 export const AUTO_PAGING_MARGIN = 300
 

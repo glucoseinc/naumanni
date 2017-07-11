@@ -7,6 +7,7 @@ import {FormattedDate, FormattedMessage as _FM} from 'react-intl'
 
 import {
   COLUMN_TAG,
+  TOOT_SEND_SUCCESS, TOOT_SEND_PENDING, TOOT_SEND_FAIL,
   SUBJECT_MIXED, COLUMN_TALK, NOTIFICATION_TYPE_MENTION, VISIBLITY_DIRECT,
   KEY_ENTER} from 'src/constants'
 import TimelineActions from 'src/controllers/TimelineActions'
@@ -210,7 +211,7 @@ export default class TalkColumn extends Column {
           </div>
         )}
         <ul className="talk-talkGroupStatuses">
-          {talkGroup.contents.map(({key, parsedContent, createdAt, encrypted}) => {
+          {talkGroup.contents.map(({key, parsedContent, createdAt, encrypted, sendStatus}) => {
             return (
               <li key={key}>
                 <div className={`status-content ${encrypted ? 'is-encrypted' : ''}`}>
@@ -222,8 +223,9 @@ export default class TalkColumn extends Column {
                     hour="2-digit" minute="2-digit" second="2-digit"
                   />
                 </div>
-                {/* TODO: check icon */}
-                <div className="status-sendStatus"><IconFont iconName="doc" /></div>
+                <div className="status-sendStatus">
+                  {this.renderTalkSendStatus(sendStatus)}
+                </div>
                 {encrypted && <div className="status-isEncrypted"><IconFont iconName="lock" /></div>}
               </li>
             )
@@ -231,6 +233,26 @@ export default class TalkColumn extends Column {
         </ul>
       </div>
     )
+  }
+
+  // TODO: This should be temporary.
+  // css class name will be corresponding with `sendStatus`
+  renderTalkSendStatus(sendStatus) {
+    let iconName
+
+    switch(sendStatus) {
+    case TOOT_SEND_SUCCESS:
+      iconName = 'talk'  // TODO:
+      break
+    case TOOT_SEND_PENDING:
+      iconName = 'mail'  // TODO:
+      break
+    case TOOT_SEND_FAIL:
+      iconName = 'doc'  // TODO:
+      break
+    }
+
+    return <IconFont iconName={iconName} />
   }
 
   renderMediaFiles() {
@@ -287,6 +309,7 @@ export default class TalkColumn extends Column {
           mediaFiles: this.state.mediaFiles,
           in_reply_to_id: lastStatusId,
           recipients: Object.values(members),
+          talkListener: this.listener,
         })
 
         this.setState({

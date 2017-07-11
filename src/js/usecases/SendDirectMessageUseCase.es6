@@ -1,9 +1,13 @@
 import {UseCase} from 'almin'
 
+import {Status} from 'src/models'
 import {encryptText} from 'src/controllers/PGP'
 import PublicKeyCache from 'src/infra/PublicKeyCache'
 import {postStatusManaged} from 'src/infra/TimelineData'
-import {MASTODON_MAX_CONTENT_SIZE} from 'src/constants'
+import {
+  MASTODON_MAX_CONTENT_SIZE,
+  VISIBLITY_DIRECT,
+} from 'src/constants'
 import UpdateLastTalkRecordUseCase from './UpdateLastTalkRecordUseCase'
 
 
@@ -21,12 +25,17 @@ export default class SendDirectMessageUseCase extends UseCase {
    * @param {Account} self
    * @param {string} message
    * @param {Account[]} recipients
+   * @param {TalkListener} talkListener
    */
-  async execute({token, self, message, mediaFiles, in_reply_to_id, recipients}) {
+  async execute({token, self, message, mediaFiles, in_reply_to_id, recipients, talkListener}) {
     if(message.length >= MASTODON_MAX_CONTENT_SIZE) {
       // encryptedの場合分割して送るから、ContentSizeはもはや関係ないはずなんだけど...
       throw new Error('__TODO_ERROR_MESSAGE__')
     }
+
+    // mock new Status locally
+    const localStatus = new Status.Local(self.uri, message, VISIBLITY_DIRECT)
+    talkListener && talkListener.pushLocalStatus(localStatus)
 
     const targets = [self].concat(recipients)
     const keyIds = []
@@ -58,6 +67,9 @@ export default class SendDirectMessageUseCase extends UseCase {
       postedStatuses = [(await this.sendPlainMessage(
         {token, self, message, mediaFiles, in_reply_to_id, recipients}))]
     }
+
+    // replace local Status with fetched one
+    talkListener && talkListener.replaceLocalStatus(localStatus.uri, postedStatuses)
 
     // TalkRecordを更新する
     const latestStatusId = postedStatuses
