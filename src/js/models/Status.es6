@@ -86,14 +86,13 @@ export default class Status extends StatusRecord {
     this.isOriginal = isOriginal || false
   }
 
-  static Local(account, content, visibility) {
-    const createdAt = moment().format()
+  static Local({account, content, createdAt, sendStatus, visibility}) {
     const data = {
       account,
       content,
       created_at: createdAt,
-      send_status: TOOT_SEND_PENDING,
-      uri: `naumanni-local:${createdAt}`,
+      send_status: sendStatus,
+      uri: `naumanni-local:${moment().format()}`,
       visibility,
     }
 
