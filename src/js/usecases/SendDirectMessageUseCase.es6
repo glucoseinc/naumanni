@@ -1,4 +1,5 @@
 import {UseCase} from 'almin'
+import moment from 'moment'
 
 import {Status} from 'src/models'
 import {encryptText} from 'src/controllers/PGP'
@@ -6,6 +7,7 @@ import PublicKeyCache from 'src/infra/PublicKeyCache'
 import {postStatusManaged} from 'src/infra/TimelineData'
 import {
   MASTODON_MAX_CONTENT_SIZE,
+  TOOT_SEND_PENDING, TOOT_SEND_FAIL,
   VISIBLITY_DIRECT,
 } from 'src/constants'
 import UpdateLastTalkRecordUseCase from './UpdateLastTalkRecordUseCase'
@@ -34,7 +36,13 @@ export default class SendDirectMessageUseCase extends UseCase {
     }
 
     // mock new Status locally
-    const localStatus = new Status.Local(self.uri, message, VISIBLITY_DIRECT)
+    const localStatus = new Status.Local({
+      account: self.uri,
+      content: message,
+      createdAt: moment().format(),
+      sendStatus: TOOT_SEND_PENDING,
+      visibility: VISIBLITY_DIRECT,
+    })
     talkListener && talkListener.pushLocalStatus(localStatus)
 
     const targets = [self].concat(recipients)
@@ -49,23 +57,44 @@ export default class SendDirectMessageUseCase extends UseCase {
         keyIds.push({user: target.acct})
     }
 
-    const publicKeys = (await Promise.all(keyIds.map((query) => PublicKeyCache.fetchKey(query))))
-      .reduce((publicKeys, storedKey, idx) => {
-        publicKeys[targets[idx].acct] = storedKey
-        console.log(targets[idx].acct, '->', storedKey && storedKey.primaryKey.fingerprint)
-        return publicKeys
-      }, {})
+    let publicKeys
+
+    try {
+      publicKeys = (await Promise.all(keyIds.map((query) => PublicKeyCache.fetchKey(query))))
+        .reduce((publicKeys, storedKey, idx) => {
+          publicKeys[targets[idx].acct] = storedKey
+          console.log(targets[idx].acct, '->', storedKey && storedKey.primaryKey.fingerprint)
+          return publicKeys
+        }, {})
+    } catch(e) {
+      console.dir(e)
+    }
 
     let postedStatuses
 
-    if(targets.every((t) => publicKeys[t.acct])) {
-      // 全員鍵をもっているので、暗号化して送る
-      postedStatuses = await this.sendEncryptedMessage({
-        token, self, message, mediaFiles, in_reply_to_id, recipients, publicKeys})
-    } else {
-      // 鍵もってないのがいるので、plainに送る
-      postedStatuses = [(await this.sendPlainMessage(
-        {token, self, message, mediaFiles, in_reply_to_id, recipients}))]
+    try {
+      if(targets.every((t) => publicKeys[t.acct])) {
+        // 全員鍵をもっているので、暗号化して送る
+        postedStatuses = await this.sendEncryptedMessage({
+          token, self, message, mediaFiles, in_reply_to_id, recipients, publicKeys})
+      } else {
+        // 鍵もってないのがいるので、plainに送る
+        postedStatuses = [(await this.sendPlainMessage(
+          {token, self, message, mediaFiles, in_reply_to_id, recipients}))]
+      }
+    } catch(e) {
+      console.dir(e)
+      const errorLocalStatus = new Status.Local({
+        account: self.uri,
+        content: message,
+        createdAt: localStatus.createdAt,
+        sendStatus: TOOT_SEND_FAIL,
+        visibility: VISIBLITY_DIRECT,
+      })
+      // mock error local Status
+      talkListener && talkListener.removeLocalStatus(localStatus.uri)
+      talkListener && talkListener.pushLocalStatus(errorLocalStatus)
+      throw e
     }
 
     // replace local Status with fetched one
