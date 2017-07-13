@@ -451,6 +451,7 @@ export default class TalkListener extends EventEmitter {
         if(status instanceof EncryptedStatus) {
           return {
             key: status.uri,
+            content: status.content,
             parsedContent: status.parsedContent,
             createdAt: status.createdAt,
             encrypted: true,
@@ -474,6 +475,7 @@ export default class TalkListener extends EventEmitter {
 
           return {
             key: status.uri,
+            content: status.content,
             parsedContent: parsedContent,
             createdAt: status.createdAt,
             sendStatus: status.send_status,

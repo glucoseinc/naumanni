@@ -211,7 +211,7 @@ export default class TalkColumn extends Column {
           </div>
         )}
         <ul className="talk-talkGroupStatuses">
-          {talkGroup.contents.map(({key, parsedContent, createdAt, encrypted, sendStatus}) => {
+          {talkGroup.contents.map(({key, content, parsedContent, createdAt, encrypted, sendStatus}) => {
             return (
               <li key={key}>
                 <div className={`status-content ${encrypted ? 'is-encrypted' : ''}`}>
@@ -224,7 +224,7 @@ export default class TalkColumn extends Column {
                   />
                 </div>
                 <div className="status-sendStatus">
-                  {this.renderTalkSendStatus(sendStatus)}
+                  {this.renderTalkSendStatus(key, content, createdAt, sendStatus)}
                 </div>
                 {encrypted && <div className="status-isEncrypted"><IconFont iconName="lock" /></div>}
               </li>
@@ -237,22 +237,25 @@ export default class TalkColumn extends Column {
 
   // TODO: This should be temporary.
   // css class name will be corresponding with `sendStatus`
-  renderTalkSendStatus(sendStatus) {
-    let iconName
-
+  renderTalkSendStatus(uri, content, createdAt, sendStatus) {
     switch(sendStatus) {
     case TOOT_SEND_SUCCESS:
-      iconName = 'talk'  // TODO:
-      break
+      return <IconFont iconName={'talk'} />  // TODO: icon
     case TOOT_SEND_PENDING:
-      iconName = 'mail'  // TODO:
-      break
-    case TOOT_SEND_FAIL:
-      iconName = 'doc'  // TODO:
-      break
-    }
+      return <IconFont iconName={'mail'} />  // TODO: icon
+    case TOOT_SEND_FAIL: {
+      const resendContext = {
+        uri,
+        createdAt,
+      }
 
-    return <IconFont iconName={iconName} />
+      return (
+        <span onClick={this.sendMessage.bind(this, content, resendContext)}>
+          <IconFont iconName={'doc'} /> {/* TODO: icon*/}
+        </span>
+      )
+    }
+    }
   }
 
   renderMediaFiles() {
@@ -287,7 +290,7 @@ export default class TalkColumn extends Column {
     this.setState({newMessage: ''})
   }
 
-  sendMessage(message) {
+  sendMessage(message, resendContext = null) {
     // get latest status id
     let lastStatusId = null
     if(this.state.talk.length) {
@@ -309,6 +312,7 @@ export default class TalkColumn extends Column {
           mediaFiles: this.state.mediaFiles,
           in_reply_to_id: lastStatusId,
           recipients: Object.values(members),
+          resendContext,
           talkListener: this.listener,
         })
 
