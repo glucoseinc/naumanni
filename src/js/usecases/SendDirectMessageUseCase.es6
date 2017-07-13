@@ -29,20 +29,27 @@ export default class SendDirectMessageUseCase extends UseCase {
    * @param {Account[]} recipients
    * @param {TalkListener} talkListener
    */
-  async execute({token, self, message, mediaFiles, in_reply_to_id, recipients, talkListener}) {
+  async execute({token, self, message, mediaFiles, in_reply_to_id, recipients, resendContext, talkListener}) {
     if(message.length >= MASTODON_MAX_CONTENT_SIZE) {
       // encryptedの場合分割して送るから、ContentSizeはもはや関係ないはずなんだけど...
       throw new Error('__TODO_ERROR_MESSAGE__')
     }
 
     // mock new Status locally
+    let createdAt = moment().format()
+
+    if(resendContext) {
+      talkListener && talkListener.removeLocalStatus(resendContext.uri)
+      createdAt = resendContext.createdAt
+    }
     const localStatus = new Status.Local({
       account: self.uri,
       content: message,
-      createdAt: moment().format(),
+      createdAt,
       sendStatus: TOOT_SEND_PENDING,
       visibility: VISIBLITY_DIRECT,
     })
+
     talkListener && talkListener.pushLocalStatus(localStatus)
 
     const targets = [self].concat(recipients)
