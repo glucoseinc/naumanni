@@ -141,7 +141,7 @@ export default class ColumnContainer extends React.Component {
       ...columnModel.toProps(),
       token,
       onClickHeader: this.onClickColumnHeader.bind(this),
-      onClose: this.onCloseColumn.bind(this),
+      onClose: this.onCloseColumn.bind(this, column),
       onSubscribeListener: () => FriendsListenerManager.onSubscribeListener(token, column),
       onUnsubscribeListener: () => FriendsListenerManager.onUnsubscribeListener(column),
     }
@@ -165,7 +165,7 @@ export default class ColumnContainer extends React.Component {
       ...columnModel.toProps(),
       onClickHashTag: (tag) => this.actionDelegate.onClickHashTag(tag),
       onClickHeader: this.onClickColumnHeader.bind(this),
-      onClose: this.onCloseColumn.bind(this),
+      onClose: this.onCloseColumn.bind(this, column),
       onSubscribeListener: () => TalkListenerManager.onSubscribeListener(token, column),
       onUnsubscribeListener: () => TalkListenerManager.onUnsubscribeListener(column),
     }

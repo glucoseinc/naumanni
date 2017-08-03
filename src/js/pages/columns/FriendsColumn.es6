@@ -21,7 +21,7 @@ type Props = {
   isLoading: boolean,
   token: OAuthToken,
   onClickHeader: (UIColumn, HTMLElement, ?HTMLElement) => void,
-  onClose: (UIColumn) => void,
+  onClose: () => void,
   onSubscribeListener: () => void,
   onUnsubscribeListener: () => void,
 }
@@ -118,11 +118,7 @@ export default class FriendsColumn extends React.Component {
   }
 
   renderMenuContent() {
-    const {column, onClose} = this.props
-
-    return <ColumnHeaderMenu
-      isCollapsed={!this.state.isMenuVisible}
-      onClickClose={onClose.bind(this, column)} />
+    return <ColumnHeaderMenu isCollapsed={!this.state.isMenuVisible} onClickClose={this.props.onClose} />
   }
 
   renderBody() {
