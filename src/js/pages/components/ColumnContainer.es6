@@ -114,21 +114,21 @@ export default class ColumnContainer extends React.Component {
   renderColumn(column: UIColumn) {
     const {type} = column
 
-    if(type === COLUMN_FRIENDS) {
+    switch(type) {
+    case COLUMN_FRIENDS:
       return this.renderFriendsColumn(column)
-    } else if(type === COLUMN_TALK) {
+    case COLUMN_TALK:
       return this.renderTalkColumn(column)
+    default:
+      return React.createElement(
+        getColumnClassForType(type), {
+          ref: column.key,
+          key: column.key,
+          column: column,
+          onClickHeader: this.scrollToColumn.bind(this),
+          ...column.params,
+        })
     }
-
-    const klass = getColumnClassForType(type)
-    return React.createElement(
-      klass, {
-        ref: column.key,
-        key: column.key,
-        column: column,
-        onClickHeader: this.scrollToColumn.bind(this),
-        ...column.params,
-      })
   }
 
   renderFriendsColumn(column: UIColumn) {
