@@ -1,6 +1,5 @@
-import EventEmitter from 'events'
-
 import {TalkRecord} from 'src/models'
+import ChangeEventEmitter from 'src/utils/EventEmitter'
 
 
 class UIFriend {
@@ -43,9 +42,7 @@ class UIFriend {
 }
 
 
-export default class FriendsListener extends EventEmitter {
-  static EVENT_CHANGE = 'EVENT_CHANGE'
-
+export default class FriendsListener extends ChangeEventEmitter {
   constructor(subject) {
     super()
     this.subject = subject
@@ -126,14 +123,5 @@ export default class FriendsListener extends EventEmitter {
     friendList.sort(UIFriend.compare)
     this.state.friends = friendList
     this.emitChange()
-  }
-
-  onChange(cb) {
-    this.on(this.EVENT_CHANGE, cb)
-    return this.removeListener.bind(this, this.EVENT_CHANGE, cb)
-  }
-
-  emitChange() {
-    this.emit(this.EVENT_CHANGE, [this])
   }
 }
