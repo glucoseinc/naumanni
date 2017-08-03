@@ -29,8 +29,8 @@ type Props = {
   onClickHashTag: (string) => void,
   onClickHeader: (UIColumn, HTMLElement, ?HTMLElement) => void,
   onClose: (UIColumn) => void,
-  onSubscribeListener: (OAuthToken, UIColumn) => void,
-  onUnsubscribeListener: (UIColumn) => void,
+  onSubscribeListener: () => void,
+  onUnsubscribeListener: () => void,
 }
 
 type State = {
@@ -83,18 +83,14 @@ export default class TalkColumn extends React.Component {
    * @override
    */
   componentDidMount() {
-    const {token, column, onSubscribeListener} = this.props
-
-    onSubscribeListener(token, column)
+    this.props.onSubscribeListener()
   }
 
   /**
    * @override
    */
   componentWillUnmount() {
-    const {column, onUnsubscribeListener} = this.props
-
-    onUnsubscribeListener(column)
+    this.props.onUnsubscribeListener()
   }
 
   /**
