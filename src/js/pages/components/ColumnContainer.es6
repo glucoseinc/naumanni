@@ -128,7 +128,6 @@ export default class ColumnContainer extends React.Component {
   }
 
   renderFriendsColumn(column: UIColumn) {
-    console.log('renderFriendsColumn')
     const props = {
       ref: column.key,  // TODO: need it ??
       key: column.key,  // TODO: need it ??
