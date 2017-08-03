@@ -14,25 +14,22 @@ import {fuzzy_match as fuzzyMatch} from 'src/libs/fts_fuzzy_match'
 import {ColumnHeader, ColumnHeaderMenu, NowLoading} from '../parts'
 import FriendsListener, {UIFriend} from 'src/controllers/FriendsListener'
 
-// temporary
-import TokenState from 'src/store/TokenState'
 
 type Props = {
   column: UIColumn,
+  friends: UIFriend[],
+  isLoading: boolean,
+  token: OAuthToken,
   onClickHeader: (UIColumn, HTMLElement, ?HTMLElement) => void,
   onClose: (UIColumn) => void,
+  onSubscribeListener: () => void,
+  onUnsubscribeListener: () => void,
 }
 
 type State = {
   filter: string,
   isMenuVisible: boolean,
-
-  // temporary
-  token: OAuthToken,
-  tokenState: TokenState,
-  friends: UIFriend[],
-  sortedFriends: UIFriend[],
-  loading: boolean,
+  sortedFriends: ?UIFriend[],
 }
 
 
@@ -48,9 +45,7 @@ export default class FriendsColumn extends React.Component {
   props: Props
   state: State
 
-  lastTalkRecordUpdated: ?string
   listener: FriendsListener
-  listenerRemovers: Function[]
   actionDelegate: TimelineActions
 
   constructor(...args: any[]) {
@@ -60,15 +55,10 @@ export default class FriendsColumn extends React.Component {
     const {column: {params: {subject}}} = this.props
 
     this.listener = new FriendsListener(subject)
-    this.listenerRemovers = []
     this.actionDelegate = new TimelineActions(this.context)
-    this.lastTalkRecordUpdated = undefined
     this.state = {
-      ...this.getStateFromContext(),
       filter: '',
-      friends: [],
       isMenuVisible: false,
-      loading: true,
       sortedFriends: undefined,
     }
   }
@@ -77,37 +67,26 @@ export default class FriendsColumn extends React.Component {
    * @override
    */
   componentDidMount() {
-    const {context} = this.context
-    const {column: {params: {subject}}} = this.props
-
-    this.listenerRemovers.push(
-      context.onChange(this.onChangeContext.bind(this)),
-      this.listener.onChange(this.onChangeFriends.bind(this)),
-    )
-
-    // make event listener
-    const token = this.state.tokenState.getTokenByAcct(subject)
-    this.listener.open(token)
+    this.props.onSubscribeListener()
   }
 
   /**
    * @override
    */
   componentWillUnmount() {
-    this.listenerRemovers.forEach((remover) => remover())
+    this.props.onUnsubscribeListener()
   }
 
   /**
    * @override
    */
   render() {
-    // const {isLoading} = this.props  // TODO: give isLoading as props from FriendsListener
-    const {loading} = this.state
+    const {isLoading} = this.props
 
     return (
       <div className="column">
         <ColumnHeader
-          canShowMenuContent={!loading}
+          canShowMenuContent={!isLoading}
           isPrivate={true}
           menuContent={this.renderMenuContent()}
           title={this.renderTitle()}
@@ -115,7 +94,7 @@ export default class FriendsColumn extends React.Component {
           onClickMenu={this.onClickMenuButton.bind(this)}
         />
 
-        {loading
+        {isLoading
           ? <div className="column-body is-loading"><NowLoading /></div>
           : this.renderBody()
         }
@@ -124,7 +103,7 @@ export default class FriendsColumn extends React.Component {
   }
 
   renderTitle() {
-    const {token} = this.state
+    const {token} = this.props
 
     if(!token) {
       return <_FM id="column.title.message" />
@@ -147,11 +126,11 @@ export default class FriendsColumn extends React.Component {
   }
 
   renderBody() {
-    if(this.state.loading) {
+    if(this.props.isLoading) {
       return <NowLoading />
     }
 
-    const friends = this.state.sortedFriends || this.state.friends
+    const friends = this.state.sortedFriends || this.props.friends
 
     return (
       <div className="column-body column-body--friends">
@@ -171,22 +150,6 @@ export default class FriendsColumn extends React.Component {
     )
   }
 
-  /**
-   * @override
-   */
-  getStateFromContext() {
-    const {context} = this.context
-    const state = context.getState()
-    const {column: {params: {subject}}} = this.props
-
-    state.token = state.tokenState.getTokenByAcct(subject)
-    if(this.lastTalkRecordUpdated !== state.talkState[subject]) {
-      this.lastTalkRecordUpdated = state.talkState[subject]
-      this.listener.sortFriends()
-    }
-    return state
-  }
-
   renderFilter() {
     const {filter} = this.state
     const {formatMessage: _} = this.context.intl
@@ -200,17 +163,6 @@ export default class FriendsColumn extends React.Component {
   }
 
   // cb
-  onChangeContext() {
-    this.setState(this.getStateFromContext())
-    this.listener.updateToken(this.state.token)
-  }
-
-  onChangeFriends() {
-    this.setState({
-      friends: this.listener.state.friends,
-      loading: false,
-    })
-  }
 
   onClickHeader() {
     const {column, onClickHeader} = this.props
@@ -251,7 +203,7 @@ export default class FriendsColumn extends React.Component {
 
     if(filter.length) {
       sortedFriends =
-        this.state.friends
+        this.props.friends
           .map((friend) => {
             const {account} = friend
             const [matchedAcct, scoreAcct, formattedAcct] = fuzzyMatch(filter, account.acct)

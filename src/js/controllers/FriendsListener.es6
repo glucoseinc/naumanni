@@ -2,6 +2,11 @@ import {TalkRecord} from 'src/models'
 import ChangeEventEmitter from 'src/utils/EventEmitter'
 
 
+const _STATE_INITIAL = 'initial'
+const _STATE_LOADING = 'loading'
+const _STATE_WATCHING = 'watching'
+
+
 class UIFriend {
   constructor(account) {
     this.account = account
@@ -49,7 +54,12 @@ export default class FriendsListener extends ChangeEventEmitter {
     this.token = null
     this.state = {
       friends: null,
+      loadStatus: _STATE_INITIAL,
     }
+  }
+
+  get isLoading() {
+    return this.state.loadStatus !== _STATE_WATCHING
   }
 
   open(token) {
@@ -57,7 +67,7 @@ export default class FriendsListener extends ChangeEventEmitter {
     this.refresh()
   }
 
-  updateTokens(token) {
+  updateToken(token) {
     this.token = token
     this.refresh()
   }
@@ -65,6 +75,8 @@ export default class FriendsListener extends ChangeEventEmitter {
   async refresh() {
     if(!this.token)
       return
+
+    this.state.loadStatus = _STATE_LOADING
 
     const {requester, account} = this.token
     const myId = account.getIdByHost(this.token.host)
@@ -122,6 +134,7 @@ export default class FriendsListener extends ChangeEventEmitter {
 
     friendList.sort(UIFriend.compare)
     this.state.friends = friendList
+    this.state.loadStatus = _STATE_WATCHING
     this.emitChange()
   }
 }
