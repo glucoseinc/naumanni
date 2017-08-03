@@ -1,4 +1,4 @@
-import PropTypes from 'prop-types'
+/* @flow */
 import React from 'react'
 import {findDOMNode} from 'react-dom'
 import {FormattedMessage as _FM} from 'react-intl'
@@ -6,12 +6,35 @@ import {intlShape} from 'react-intl'
 
 import {AppPropType, ContextPropType} from 'src/propTypes'
 import {SUBJECT_MIXED, COLUMN_FRIENDS, COLUMN_TALK} from 'src/constants'
+import {Account, OAuthToken, UIColumn} from 'src/models'
 import AddColumnUseCase from 'src/usecases/AddColumnUseCase'
 import TimelineActions from 'src/controllers/TimelineActions'
 import AccountRow from '../components/AccountRow'
 import {fuzzy_match as fuzzyMatch} from 'src/libs/fts_fuzzy_match'
 import {ColumnHeader, ColumnHeaderMenu, NowLoading} from '../parts'
-import FriendsListener from 'src/controllers/FriendsListener'
+import FriendsListener, {UIFriend} from 'src/controllers/FriendsListener'
+
+// temporary
+import TokenState from 'src/store/TokenState'
+
+type Props = {
+  column: UIColumn,
+  subject: string,
+  onClickHeader: (UIColumn, HTMLElement, ?HTMLElement) => void,
+  onClose: (UIColumn) => void,
+}
+
+type State = {
+  filter: string,
+  isMenuVisible: boolean,
+
+  // temporary
+  token: OAuthToken,
+  tokenState: TokenState,
+  friends: UIFriend[],
+  sortedFriends: UIFriend[],
+  loading: boolean,
+}
 
 
 /**
@@ -23,12 +46,15 @@ export default class FriendsColumn extends React.Component {
     context: ContextPropType,
     intl: intlShape,
   }
+  props: Props
+  state: State
 
-  static propTypes = {
-    subject: PropTypes.string.isRequired,
-  }
+  lastTalkRecordUpdated: ?string
+  listener: FriendsListener
+  listenerRemovers: Function[]
+  actionDelegate: TimelineActions
 
-  constructor(...args) {
+  constructor(...args: any[]) {
     super(...args)
     // mixed timeline not allowed
     require('assert')(args[0].subject !== SUBJECT_MIXED)
@@ -37,7 +63,7 @@ export default class FriendsColumn extends React.Component {
     this.listener = new FriendsListener(subject)
     this.listenerRemovers = []
     this.actionDelegate = new TimelineActions(this.context)
-    this.lastTalkRecordUpdated = null
+    this.lastTalkRecordUpdated = undefined
     this.state = {
       ...this.getStateFromContext(),
       filter: '',
@@ -166,7 +192,7 @@ export default class FriendsColumn extends React.Component {
 
     return (
       <div className="friends-filter">
-        <input type="text" value={filter} onChange={::this.onChangeFilter}
+        <input type="text" value={filter} onChange={this.onChangeFilter.bind(this)}
           placeholder={_({id: 'message.freind_filter.placeholder'})} />
       </div>
     )
@@ -199,12 +225,12 @@ export default class FriendsColumn extends React.Component {
     }
   }
 
-  onClickMenuButton(e) {
+  onClickMenuButton(e: SyntheticEvent) {
     e.stopPropagation()
     this.setState({isMenuVisible: !this.state.isMenuVisible})
   }
 
-  onClickFriend(account) {
+  onClickFriend(account: Account) {
     const {context} = this.context
 
     context.useCase(new AddColumnUseCase()).execute(COLUMN_TALK, {
@@ -217,7 +243,7 @@ export default class FriendsColumn extends React.Component {
    * 絞り込む。とりあえずusernameをレーベンシュタイン距離でソートしてみる
    * @param {Event} e
    */
-  onChangeFilter(e) {
+  onChangeFilter(e: SyntheticInputEvent) {
     const filter = e.target.value
     let sortedFriends
 
@@ -255,6 +281,4 @@ export default class FriendsColumn extends React.Component {
     this.setState({filter, sortedFriends})
   }
 }
-
-
 require('./').registerColumn(COLUMN_FRIENDS, FriendsColumn)
