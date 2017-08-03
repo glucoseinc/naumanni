@@ -19,7 +19,6 @@ import TokenState from 'src/store/TokenState'
 
 type Props = {
   column: UIColumn,
-  subject: string,
   onClickHeader: (UIColumn, HTMLElement, ?HTMLElement) => void,
   onClose: (UIColumn) => void,
 }
@@ -58,7 +57,7 @@ export default class FriendsColumn extends React.Component {
     super(...args)
     // mixed timeline not allowed
     require('assert')(args[0].subject !== SUBJECT_MIXED)
-    const {subject} = this.props
+    const {column: {params: {subject}}} = this.props
 
     this.listener = new FriendsListener(subject)
     this.listenerRemovers = []
@@ -79,6 +78,7 @@ export default class FriendsColumn extends React.Component {
    */
   componentDidMount() {
     const {context} = this.context
+    const {column: {params: {subject}}} = this.props
 
     this.listenerRemovers.push(
       context.onChange(this.onChangeContext.bind(this)),
@@ -86,7 +86,7 @@ export default class FriendsColumn extends React.Component {
     )
 
     // make event listener
-    const token = this.state.tokenState.getTokenByAcct(this.props.subject)
+    const token = this.state.tokenState.getTokenByAcct(subject)
     this.listener.open(token)
   }
 
@@ -177,10 +177,11 @@ export default class FriendsColumn extends React.Component {
   getStateFromContext() {
     const {context} = this.context
     const state = context.getState()
+    const {column: {params: {subject}}} = this.props
 
-    state.token = state.tokenState.getTokenByAcct(this.props.subject)
-    if(this.lastTalkRecordUpdated !== state.talkState[this.props.subject]) {
-      this.lastTalkRecordUpdated = state.talkState[this.props.subject]
+    state.token = state.tokenState.getTokenByAcct(subject)
+    if(this.lastTalkRecordUpdated !== state.talkState[subject]) {
+      this.lastTalkRecordUpdated = state.talkState[subject]
       this.listener.sortFriends()
     }
     return state
@@ -201,7 +202,7 @@ export default class FriendsColumn extends React.Component {
   // cb
   onChangeContext() {
     this.setState(this.getStateFromContext())
-    this.listener.updateTokens(this.state.token)
+    this.listener.updateToken(this.state.token)
   }
 
   onChangeFriends() {
@@ -232,10 +233,11 @@ export default class FriendsColumn extends React.Component {
 
   onClickFriend(account: Account) {
     const {context} = this.context
+    const {column: {params: {subject}}} = this.props
 
     context.useCase(new AddColumnUseCase()).execute(COLUMN_TALK, {
       to: account.acct,
-      from: this.props.subject,
+      from: subject,
     })
   }
 
