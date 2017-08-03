@@ -3,53 +3,61 @@ import PropTypes from 'prop-types'
 import React from 'react'
 import {findDOMNode} from 'react-dom'
 import {FormattedMessage as _FM} from 'react-intl'
+import {intlShape} from 'react-intl'
 
+import {AppPropType, ContextPropType} from 'src/propTypes'
 import {SUBJECT_MIXED, COLUMN_FRIENDS, COLUMN_TALK} from 'src/constants'
 import {TalkRecord} from 'src/models'
 import AddColumnUseCase from 'src/usecases/AddColumnUseCase'
 import TimelineActions from 'src/controllers/TimelineActions'
-import Column from './Column'
 import AccountRow from '../components/AccountRow'
 import {fuzzy_match as fuzzyMatch} from 'src/libs/fts_fuzzy_match'
+import {ColumnHeader, ColumnHeaderMenu, NowLoading} from '../parts'
 
 
 /**
  * タイムラインのカラム
  */
-export default class FriendsColumn extends Column {
+export default class FriendsColumn extends React.Component {
+  static contextTypes = {
+    app: AppPropType,
+    context: ContextPropType,
+    intl: intlShape,
+  }
+
   static propTypes = {
     subject: PropTypes.string.isRequired,
   }
 
   constructor(...args) {
+    super(...args)
     // mixed timeline not allowed
     require('assert')(args[0].subject !== SUBJECT_MIXED)
-    super(...args)
-
     const {subject} = this.props
 
     this.listener = new FriendsListener(subject)
-    this.state.loading = true
-    this.state.filter = ''
+    this.listenerRemovers = []
     this.actionDelegate = new TimelineActions(this.context)
     this.lastTalkRecordUpdated = null
-  }
-
-  /**
-   * @override
-   */
-  isPrivate() {
-    return true
+    this.state = {
+      ...this.getStateFromContext(),
+      filter: '',
+      friends: [],
+      isMenuVisible: false,
+      loading: true,
+      sortedFriends: undefined,
+    }
   }
 
   /**
    * @override
    */
   componentDidMount() {
-    super.componentDidMount()
+    const {context} = this.context
 
     this.listenerRemovers.push(
-      this.listener.onChange(::this.onChangeFriends),
+      context.onChange(this.onChangeContext.bind(this)),
+      this.listener.onChange(this.onChangeFriends.bind(this)),
     )
 
     // make event listener
@@ -60,6 +68,36 @@ export default class FriendsColumn extends Column {
   /**
    * @override
    */
+  componentWillUnmount() {
+    this.listenerRemovers.forEach((remover) => remover())
+  }
+
+  /**
+   * @override
+   */
+  render() {
+    // const {isLoading} = this.props  // TODO: give isLoading as props from FriendsListener
+    const {loading} = this.state
+
+    return (
+      <div className="column">
+        <ColumnHeader
+          canShowMenuContent={!loading}
+          isPrivate={true}
+          menuContent={this.renderMenuContent()}
+          title={this.renderTitle()}
+          onClickHeader={this.onClickHeader.bind(this)}
+          onClickMenu={this.onClickMenuButton.bind(this)}
+        />
+
+        {loading
+          ? <div className="column-body is-loading"><NowLoading /></div>
+          : this.renderBody()
+        }
+      </div>
+    )
+  }
+
   renderTitle() {
     const {token} = this.state
 
@@ -75,9 +113,14 @@ export default class FriendsColumn extends Column {
     )
   }
 
-  /**
-   * @override
-   */
+  renderMenuContent() {
+    const {column, onClose} = this.props
+
+    return <ColumnHeaderMenu
+      isCollapsed={!this.state.isMenuVisible}
+      onClickClose={onClose.bind(this, column)} />
+  }
+
   renderBody() {
     if(this.state.loading) {
       return <NowLoading />
@@ -86,14 +129,14 @@ export default class FriendsColumn extends Column {
     const friends = this.state.sortedFriends || this.state.friends
 
     return (
-      <div className={this.columnBodyClassName()}>
+      <div className="column-body column-body--friends">
         {this.renderFilter()}
         <ul className="friends-list" ref="friendsList">
           {friends.map((friend) => (
             <li key={friend.key}>
               <AccountRow
                 account={friend.account}
-                onClick={::this.onClickFriend}
+                onClick={this.onClickFriend.bind(this)}
                 {...this.actionDelegate.props}
               />
             </li>
@@ -103,15 +146,12 @@ export default class FriendsColumn extends Column {
     )
   }
 
-  columnBodyClassName() {
-    return super.columnBodyClassName() + ' column-body--friends'
-  }
-
   /**
    * @override
    */
   getStateFromContext() {
-    const state = super.getStateFromContext()
+    const {context} = this.context
+    const state = context.getState()
 
     state.token = state.tokenState.getTokenByAcct(this.props.subject)
     if(this.lastTalkRecordUpdated !== state.talkState[this.props.subject]) {
@@ -119,22 +159,6 @@ export default class FriendsColumn extends Column {
       this.listener.sortFriends()
     }
     return state
-  }
-
-  /**
-   * @override
-   */
-  onChangeContext() {
-    super.onChangeContext()
-    this.listener.updateTokens(this.state.token)
-  }
-
-
-  /**
-   * @override
-   */
-  scrollNode() {
-    return findDOMNode(this.refs.friendsList)
   }
 
   renderFilter() {
@@ -150,11 +174,35 @@ export default class FriendsColumn extends Column {
   }
 
   // cb
+  onChangeContext() {
+    this.setState(this.getStateFromContext())
+    this.listener.updateTokens(this.state.token)
+  }
+
   onChangeFriends() {
     this.setState({
       friends: this.listener.state.friends,
       loading: false,
     })
+  }
+
+  onClickHeader() {
+    const {column, onClickHeader} = this.props
+    const node = findDOMNode(this)
+    const scrollNode = findDOMNode(this.refs.friendsList)
+
+    if(node instanceof HTMLElement) {
+      if(scrollNode && scrollNode instanceof HTMLElement) {
+        onClickHeader(column, node, scrollNode)
+      } else {
+        onClickHeader(column, node, undefined)
+      }
+    }
+  }
+
+  onClickMenuButton(e) {
+    e.stopPropagation()
+    this.setState({isMenuVisible: !this.state.isMenuVisible})
   }
 
   onClickFriend(account) {
@@ -211,7 +259,7 @@ export default class FriendsColumn extends Column {
 
 
 //
-import {EventEmitter} from 'events'
+import EventEmitter from 'events'
 
 
 class UIFriend {

@@ -3,13 +3,14 @@ import React from 'react'
 import {findDOMNode} from 'react-dom'
 import {Map} from 'immutable'
 
-import {COLUMN_TALK} from 'src/constants'
+import {COLUMN_FRIENDS, COLUMN_TALK} from 'src/constants'
 import {ContextPropType} from 'src/propTypes'
 import {UIColumn} from 'src/models'
 import {niceScrollLeft} from 'src/utils'
 import {getColumnClassForType} from 'src/pages/columns'
 import TalkListenerManager, {TalkModel} from 'src/controllers/TalkListenerManager'
 import TimelineActions from 'src/controllers/TimelineActions'
+import FriendsColumn from 'src/pages/columns/FriendsColumn'
 import TalkColumn from 'src/pages/columns/TalkColumn'
 import CloseColumnUseCase from 'src/usecases/CloseColumnUseCase'
 
@@ -107,11 +108,15 @@ export default class ColumnContainer extends React.Component {
   }
 
   renderColumn(column: UIColumn) {
-    if(column.type === COLUMN_TALK) {
+    const {type} = column
+
+    if(type === COLUMN_FRIENDS) {
+      return this.renderFriendsColumn(column)
+    } else if(type === COLUMN_TALK) {
       return this.renderTalkColumn(column)
     }
 
-    const klass = getColumnClassForType(column.type)
+    const klass = getColumnClassForType(type)
     return React.createElement(
       klass, {
         ref: column.key,
@@ -120,6 +125,20 @@ export default class ColumnContainer extends React.Component {
         onClickHeader: this.scrollToColumn.bind(this),
         ...column.params,
       })
+  }
+
+  renderFriendsColumn(column: UIColumn) {
+    console.log('renderFriendsColumn')
+    const props = {
+      ref: column.key,  // TODO: need it ??
+      key: column.key,  // TODO: need it ??
+      column: column,
+      onClickHeader: this.onClickColumnHeader.bind(this),
+      onClose: this.onCloseColumn.bind(this),
+      ...column.params,  // TODO: need it ??
+    }
+
+    return <FriendsColumn key={column.key} {...props} />
   }
 
   renderTalkColumn(column: UIColumn) {
@@ -143,7 +162,7 @@ export default class ColumnContainer extends React.Component {
       onUnsubscribeListener: (...args) => TalkListenerManager.onUnsubscribeListener(...args),
     }
 
-    return <TalkColumn {...props} />
+    return <TalkColumn key={column.key} {...props} />
   }
 
   // cb
