@@ -1,4 +1,6 @@
+/* @flow */
 import React from 'react'
+import {List} from 'immutable'
 import {findDOMNode} from 'react-dom'
 import {FormattedMessage as _FM} from 'react-intl'
 import classNames from 'classnames'
@@ -7,31 +9,53 @@ import {ContextPropType} from 'src/propTypes'
 import {
   COLUMN_NOTIFICATIONS, SUBJECT_MIXED, MAX_STATUSES,
 } from 'src/constants'
+import {NotificationRef} from 'src/infra/TimelineData'
+import {OAuthToken, UIColumn} from 'src/models'
 import {ColumnHeader, ColumnHeaderMenu, NowLoading} from 'src/pages/parts'
 import PagingColumnContent from 'src/pages/components/PagingColumnContent'
 
 
+type Props = {
+  column: UIColumn,
+  token: OAuthToken,
+  tokens: List<OAuthToken>,
+  isLoading: boolean,
+  isTailLoading: boolean,
+  timeline: List<NotificationRef>,
+  onLockedPaging: () => void,
+  onUnlockedPaging: () => void,
+  onLoadMoreStatuses: () => void,
+  onSubscribeListener: () => void,
+  onUnsubscribeListener: () => void,
+  onClickHeader: (UIColumn, HTMLElement, ?HTMLElement) => void,
+  onClose: () => void,
+}
+
+type State = {
+  isMenuVisible: boolean,
+}
+
 /**
  * 通知カラム
- * TODO: TimelineColumnとのコピペなのを何とかする
  */
 export default class NotificationColumn extends React.Component {
   static contextTypes = {
     context: ContextPropType,
     intl: intlShape,
   }
+  props: Props
+  state: State
 
-  constructor(...args) {
+  scrollNode: ?HTMLElement
+
+  constructor(...args: any[]) {
     super(...args)
     this.state = {
       isMenuVisible: false,
     }
-
-    // temporary
-    this.listenerRemovers = []
   }
 
-  get isMixedTimeline() {
+  get isMixedTimeline(): boolean {
     const {column: {params: {subject}}} = this.props
 
     return subject === SUBJECT_MIXED
@@ -118,7 +142,7 @@ export default class NotificationColumn extends React.Component {
       )}>
         <PagingColumnContent
           isTailLoading={isTailLoading}
-          subjcet={subject}
+          subject={subject}
           timeline={timeline}
           tokens={tokens}
           onLoadMoreStatuses={this.onLoadMoreStatuses.bind(this)}
@@ -134,7 +158,7 @@ export default class NotificationColumn extends React.Component {
   // private
 
 
-  onScrollNodeLoaded(el) {
+  onScrollNodeLoaded(el: HTMLElement) {
     this.scrollNode = el
   }
 
@@ -147,7 +171,7 @@ export default class NotificationColumn extends React.Component {
     const node = findDOMNode(this)
 
     if(node instanceof HTMLElement) {
-      if(this.scrollNode && this.scrollNode instanceof HTMLElement) {
+      if(this.scrollNode != null) {
         onClickHeader(column, node, this.scrollNode)
       } else {
         onClickHeader(column, node, undefined)
@@ -155,7 +179,7 @@ export default class NotificationColumn extends React.Component {
     }
   }
 
-  onClickMenuButton(e) {
+  onClickMenuButton(e: SyntheticEvent) {
     e.stopPropagation()
     this.setState({isMenuVisible: !this.state.isMenuVisible})
   }
