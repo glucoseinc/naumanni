@@ -108,7 +108,11 @@ export default class NotificationColumn extends React.Component {
     const {formatMessage} = this.context.intl
 
     if(this.isMixedTimeline) {
-      return formatMessage({id: 'column.title.united_notifications'})
+      return (
+        <h1 className="column-headerTitle">
+          <_FM id="column.title.united_notifications" />
+        </h1>
+      )
     } else {
       const {token} = this.props
 
