@@ -2,9 +2,9 @@
 import {List} from 'immutable'
 
 import {
-  COLUMN_NOTIFICATIONS,
+  COLUMN_NOTIFICATIONS, COLUMN_TAG,
   MAX_STATUSES,
-  STREAM_HOME, STREAM_LOCAL, STREAM_FEDERATION,
+  STREAM_HOME, STREAM_LOCAL, STREAM_FEDERATION, STREAM_TAG,
   TIMELINE_FEDERATION, TIMELINE_LOCAL, TIMELINE_HOME,
 } from 'src/constants'
 import ChangeEventEmitter from 'src/utils/EventEmitter'
@@ -110,6 +110,18 @@ class TimelineListenerManager extends ChangeEventEmitter {
     if(type === COLUMN_NOTIFICATIONS) {
       timeline = new NotificationTimeline(MAX_STATUSES)
       listener = new NotificationListener(timeline, this.db)
+    } else if(type === COLUMN_TAG) {
+      class _HashtagTimelineListener extends TimelineListener {
+        addListener(key, token) {
+          const websocketUrl = token.instance.makeStreamingAPIUrl(token, STREAM_TAG, {
+            tag: column.params.tag,
+          })
+          super.addListener(key, token, websocketUrl)
+        }
+      }
+
+      timeline = new StatusTimeline(MAX_STATUSES)
+      listener = new _HashtagTimelineListener(timeline, this.db)
     } else {
       class _TimelineListener extends TimelineListener {
         addListener(key, token) {
@@ -120,27 +132,30 @@ class TimelineListenerManager extends ChangeEventEmitter {
           super.addListener(key, token, websocketUrl)
         }
       }
+
       timeline = new StatusTimeline(MAX_STATUSES)
       listener = new _TimelineListener(timeline, this.db)
     }
 
-    this.listeners.set(key, listener)
-    this.timelines.set(key, timeline)
-    this.listenerRemovers.set(key, [
-      timeline.onChange(this.onTimelineChanged.bind(this, column)),
-      this.db.registerTimeline(timeline),
-    ])
-    this.isLoadingStatuses.set(key, true)
-    this._isScrollLockedStatuses.set(key, false)
+    if(timeline != null && listener != null) {
+      this.listeners.set(key, listener)
+      this.timelines.set(key, timeline)
+      this.listenerRemovers.set(key, [
+        timeline.onChange(this.onTimelineChanged.bind(this, column)),
+        this.db.registerTimeline(timeline),
+      ])
+      this.isLoadingStatuses.set(key, true)
+      this._isScrollLockedStatuses.set(key, false)
 
-    const tokenListener = new TokenListener(subject, {
-      onTokenAdded: this.onTokenAdded.bind(this, column),
-      onTokenRemoved: this.onTokenRemoved.bind(this, column),
-      onTokenUpdated: this.onTokenUpdated.bind(this, column),
-    })
+      const tokenListener = new TokenListener(subject, {
+        onTokenAdded: this.onTokenAdded.bind(this, column),
+        onTokenRemoved: this.onTokenRemoved.bind(this, column),
+        onTokenUpdated: this.onTokenUpdated.bind(this, column),
+      })
 
-    tokenListener.updateTokens(this._tokens)
-    this.tokenListeners.set(key, tokenListener)
+      tokenListener.updateTokens(this._tokens)
+      this.tokenListeners.set(key, tokenListener)
+    }
   }
 
   onUnsubscribeListener(column: UIColumn) {
@@ -263,6 +278,8 @@ class TimelineListenerManager extends ChangeEventEmitter {
 
     if(type == COLUMN_NOTIFICATIONS) {
       return new NotificationTimelineLoader(timeline, token, this.db)
+    } else if(type === COLUMN_TAG) {
+      return new HashtagTimelineLoader(column.params.tag, timeline, token, this.db)
     } else {
       return makeTimelineLoader(column.params.timelineType, timeline, token, this.db)
     }
