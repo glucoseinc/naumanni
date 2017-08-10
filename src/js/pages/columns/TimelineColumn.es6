@@ -1,6 +1,8 @@
+/* @flow */
 import React from 'react'
 import {findDOMNode} from 'react-dom'
 import {intlShape} from 'react-intl'
+import {List} from 'immutable'
 import classNames from 'classnames'
 import Toggle from 'react-toggle'
 import {FormattedMessage as _FM} from 'react-intl'
@@ -10,6 +12,8 @@ import {
   TIMELINE_FILTER_BOOST, TIMELINE_FILTER_REPLY, TIMELINE_FILTER_REGEX,
 } from 'src/constants'
 import {ContextPropType} from 'src/propTypes'
+import {StatusRef} from 'src/infra/TimelineData'
+import {OAuthToken, UIColumn} from 'src/models'
 import {ColumnFilterText, ColumnHeader, ColumnHeaderMenu, NowLoading} from 'src/pages/parts'
 import PagingColumnContent from 'src/pages/components/PagingColumnContent'
 
@@ -22,6 +26,31 @@ const storageKeyForFilter = (type, subject, timelineType) => (
   `naumanni::${type}:${subject}-${timelineType}`
 )
 
+type TimelineFilter = Map<string, boolean>
+
+type Props = {
+  column: UIColumn,
+  token: OAuthToken,
+  tokens: List<OAuthToken>,
+  isLoading: boolean,
+  isTailLoading: boolean,
+  timeline: List<StatusRef>,
+  onLockedPaging: () => void,
+  onUnlockedPaging: () => void,
+  onLoadMoreStatuses: () => void,
+  onSubscribeListener: () => void,
+  onUnsubscribeListener: () => void,
+  onUpdateTimelineFilter: (TimelineFilter) => void,
+  onClickHeader: (UIColumn, HTMLElement, ?HTMLElement) => void,
+  onClose: () => void,
+}
+
+type State = {
+  isMenuVisible: boolean,
+  filters: TimelineFilter,
+  filterRegex: string,
+}
+
 
 /**
  * タイムラインのカラム
@@ -31,30 +60,33 @@ export default class TimelineColumn extends React.Component {
     context: ContextPropType,
     intl: intlShape,
   }
+  props: Props
+  state: State
 
-  constructor(...args) {
+  scrollNode: ?HTMLElement
+
+  constructor(...args: any[]) {
     super(...args)
 
     const {column: {params: {subject, timelineType}}} = this.props
 
+    let shouldFilter = localStorage.getItem(storageKeyForFilter(TIMELINE_FILTER_BOOST, subject, timelineType))
+    const shouldFilterBoost: boolean = shouldFilter != null ? JSON.parse(shouldFilter) : false
+    shouldFilter = localStorage.getItem(storageKeyForFilter(TIMELINE_FILTER_REPLY, subject, timelineType))
+    const shouldFilterReply: boolean = shouldFilter != null ? JSON.parse(shouldFilter) : false
+    const filterRegex = localStorage.getItem(storageKeyForFilter(TIMELINE_FILTER_REGEX, subject, timelineType))
+
     this.state = {
-      ...this.state,
       isMenuVisible: false,
       filters: new Map([
-        [TIMELINE_FILTER_BOOST, localStorage.getItem(storageKeyForFilter(TIMELINE_FILTER_BOOST, subject, timelineType))
-          ? JSON.parse(localStorage.getItem(storageKeyForFilter(TIMELINE_FILTER_BOOST, subject, timelineType)))
-          : true],
-        [TIMELINE_FILTER_REPLY, localStorage.getItem(storageKeyForFilter(TIMELINE_FILTER_REPLY, subject, timelineType))
-          ? JSON.parse(localStorage.getItem(storageKeyForFilter(TIMELINE_FILTER_REPLY, subject, timelineType)))
-          : true],
+        [TIMELINE_FILTER_BOOST, shouldFilterBoost],
+        [TIMELINE_FILTER_REPLY, shouldFilterReply],
       ]),
-      filterRegex: localStorage.getItem(storageKeyForFilter(TIMELINE_FILTER_REGEX, subject, timelineType))
-        ? localStorage.getItem(storageKeyForFilter(TIMELINE_FILTER_REGEX, subject, timelineType))
-        : '',
+      filterRegex: filterRegex != null ? filterRegex : '',
     }
   }
 
-  get isMixedTimeline() {
+  get isMixedTimeline(): boolean {
     const {column: {params: {subject}}} = this.props
 
     return subject === SUBJECT_MIXED
@@ -143,7 +175,7 @@ export default class TimelineColumn extends React.Component {
 
   toggleFilterMenus() {
     return [...this.state.filters.entries()].map(([type, toggle]) => (
-      <div className="menu-item menu-item--toggle" key={`${type}:${toggle}`}>
+      <div className="menu-item menu-item--toggle" key={`${type}:${toggle ? 'true' : 'false'}`}>
         <Toggle
           checked={toggle}
           onChange={this.onChangeTimelineFilter.bind(this, type)} />
@@ -197,7 +229,7 @@ export default class TimelineColumn extends React.Component {
   // cb
 
 
-  onChangeTimelineFilter(type) {
+  onChangeTimelineFilter(type: string) {
     const {column: {params: {subject, timelineType}}, onUpdateTimelineFilter} = this.props
     const {filters} = this.state
     const newValue = !filters.get(type)
@@ -209,10 +241,10 @@ export default class TimelineColumn extends React.Component {
 
     localStorage.setItem(
       storageKeyForFilter(type, subject, timelineType),
-      newValue)
+      newValue ? 'true' : 'false')
   }
 
-  onChangeFilterRegex(filterRegex) {
+  onChangeFilterRegex(filterRegex: string) {
     const {column: {params: {subject, timelineType}}} = this.props
     this.setState({filterRegex})
 
@@ -221,7 +253,7 @@ export default class TimelineColumn extends React.Component {
       filterRegex)
   }
 
-  onScrollNodeLoaded(el) {
+  onScrollNodeLoaded(el: HTMLElement) {
     this.scrollNode = el
   }
 
@@ -242,7 +274,7 @@ export default class TimelineColumn extends React.Component {
     }
   }
 
-  onClickMenuButton(e) {
+  onClickMenuButton(e: SyntheticEvent) {
     e.stopPropagation()
     this.setState({isMenuVisible: !this.state.isMenuVisible})
   }

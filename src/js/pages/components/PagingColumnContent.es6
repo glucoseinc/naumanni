@@ -14,7 +14,7 @@ import {NowLoading} from 'src/pages/parts'
 
 
 type Props = {
-  filterRegex: string,
+  filterRegex?: string,
   isTailLoading: boolean,
   subject: string,
   timeline: List<NotificationRef | StatusRef>,
@@ -85,7 +85,7 @@ export default class PagingColumnContent extends React.PureComponent {
     } else {
       const {filterRegex} = this.props
 
-      if(filterRegex.trim().length > 0) {
+      if(filterRegex != null && filterRegex.trim().length > 0) {
         const regex = new RegExp(filterRegex.trim(), 'i')
 
         if(regex.test(ref.resolve().plainContent)) {
