@@ -1,28 +1,18 @@
-import PropTypes from 'prop-types'
 import React from 'react'
-import ReactDOM from 'react-dom'
+import {findDOMNode} from 'react-dom'
+import {intlShape} from 'react-intl'
+import classNames from 'classnames'
 import Toggle from 'react-toggle'
 import {FormattedMessage as _FM} from 'react-intl'
-
 import {
   COLUMN_TIMELINE,
-  TIMELINE_FEDERATION, TIMELINE_LOCAL, TIMELINE_HOME, SUBJECT_MIXED,
+  SUBJECT_MIXED,
   TIMELINE_FILTER_BOOST, TIMELINE_FILTER_REPLY,
-  STREAM_HOME, STREAM_LOCAL, STREAM_FEDERATION,
-  AUTO_PAGING_MARGIN, MAX_STATUSES,
 } from 'src/constants'
-import TimelineListener from 'src/controllers/TimelineListener'
-import {makeTimelineLoader} from 'src/controllers/TimelineLoader'
-import {StatusTimeline} from 'src/models/Timeline'
-import {ColumnHeaderMenu} from 'src/pages/parts'
-import PagingColumn from './PagingColumn'
-import TimelineStatusContainer from '../components/TimelineStatusContainer'
+import {ContextPropType} from 'src/propTypes'
+import {ColumnHeader, ColumnHeaderMenu, NowLoading} from 'src/pages/parts'
+import PagingColumnContent from 'src/pages/components/PagingColumnContent'
 
-const TIMELINE_TO_STREAM_MAP = {
-  [TIMELINE_HOME]: STREAM_HOME,
-  [TIMELINE_LOCAL]: STREAM_LOCAL,
-  [TIMELINE_FEDERATION]: STREAM_FEDERATION,
-}
 
 const TIMELINE_FILTER_TEXT_MAP = {
   [TIMELINE_FILTER_BOOST]: 'column.menu.show_boosts',
@@ -37,20 +27,20 @@ const storageKeyForFilter = (type, subject, timelineType) => (
 /**
  * タイムラインのカラム
  */
-export default class TimelineColumn extends PagingColumn {
-  static propTypes = {
-    ...PagingColumn.propTypes,
-    timelineType: PropTypes.string.isRequired,
+export default class TimelineColumn extends React.Component {
+  static contextTypes = {
+    context: ContextPropType,
+    intl: intlShape,
   }
 
   constructor(...args) {
     super(...args)
 
-    const {subject, timelineType} = this.props
+    const {column: {params: {subject, timelineType}}} = this.props
 
     this.state = {
       ...this.state,
-      loading: true,
+      isMenuVisible: false,
       filters: new Map([
         [TIMELINE_FILTER_BOOST, localStorage.getItem(storageKeyForFilter(TIMELINE_FILTER_BOOST, subject, timelineType))
           ? JSON.parse(localStorage.getItem(storageKeyForFilter(TIMELINE_FILTER_BOOST, subject, timelineType)))
@@ -62,25 +52,65 @@ export default class TimelineColumn extends PagingColumn {
     }
   }
 
-  /**
-   * @override
-   */
-  componentDidMount() {
-    super.componentDidMount()
-    this.timeline.updateFilter(this.state.filters)
+  get isMixedTimeline() {
+    const {column: {params: {subject}}} = this.props
+
+    return subject === SUBJECT_MIXED
   }
 
   /**
    * @override
    */
+  componentDidMount() {
+    this.props.onSubscribeListener()
+    this.props.onUpdateTimelineFilter(this.state.filters)
+  }
+
+  /**
+   * @override
+   */
+  componentWillUnmount() {
+    this.props.onUnsubscribeListener()
+  }
+
+  /**
+   * @override
+   */
+  render() {
+    const {isLoading} = this.props
+
+    return (
+      <div className="column">
+        <ColumnHeader
+          canShowMenuContent={!isLoading}
+          isPrivate={true}
+          menuContent={this.renderMenuContent()}
+          title={this.renderTitle()}
+          onClickHeader={this.onClickHeader.bind(this)}
+          onClickMenu={this.onClickMenuButton.bind(this)}
+        />
+
+        {isLoading
+          ? <div className="column-body is-loading"><NowLoading /></div>
+          : this.renderBody()
+        }
+      </div>
+    )
+  }
+
+
+  // render
+
+
   renderTitle() {
+    const {column: {params: {timelineType}}} = this.props
     const {formatMessage} = this.context.intl
 
-    if(this.isMixedTimeline()) {
-      return formatMessage({id: `column.title.united_timeline_${this.props.timelineType}`})
+    if(this.isMixedTimeline) {
+      return formatMessage({id: `column.title.united_timeline_${timelineType}`})
     } else {
-      const {token} = this.state
-      const typeName = formatMessage({id: `column.title.timeline_${this.props.timelineType}`})
+      const {token} = this.props
+      const typeName = formatMessage({id: `column.title.timeline_${timelineType}`})
 
       if(!token)
         return typeName
@@ -94,18 +124,10 @@ export default class TimelineColumn extends PagingColumn {
     }
   }
 
-  /**
-   * @override
-   */
   renderMenuContent() {
     return (
-      <ColumnHeaderMenu>
-
+      <ColumnHeaderMenu isCollapsed={!this.state.isMenuVisible} onClickClose={this.props.onClose}>
         {this.renderFilterMenus()}
-
-        <div className="menu-item--close" onClick={this.onClickCloseColumn.bind(this)}>
-          <_FM id="column.menu.close" />
-        </div>
       </ColumnHeaderMenu>
     )
   }
@@ -121,75 +143,75 @@ export default class TimelineColumn extends PagingColumn {
     ))
   }
 
-  /**
-   * @override
-   */
-  renderTimelineRow(ref) {
-    const {subject} = this.props
-    const {tokens} = this.state.tokenState
+  renderBody() {
+    const {
+      column: {params: {subject}},
+      isLoading, isTailLoading, timeline, tokens,
+      onLockedPaging, onUnlockedPaging,
+    } = this.props
 
     return (
-      <li key={ref.uri}>
-        <TimelineStatusContainer
-          subject={subject !== SUBJECT_MIXED ? subject : null}
+      <div className={classNames(
+        'column-body',
+        {'is-loading': isLoading}
+      )}>
+        <PagingColumnContent
+          isTailLoading={isTailLoading}
+          subject={subject}
+          timeline={timeline}
           tokens={tokens}
-          onLockStatus={() => this.scrollLockCounter.increment()}
-          {...ref.expand()}
-          {...this.actionDelegate.props}
+          onLoadMoreStatuses={this.onLoadMoreStatuses.bind(this)}
+          onLockedPaging={onLockedPaging}
+          onUnlockedPaging={onUnlockedPaging}
+          onScrollNodeLoaded={this.onScrollNodeLoaded.bind(this)}
         />
-      </li>
+      </div>
     )
   }
 
-  /**
-   * @override
-   */
-  get timelineClass() {
-    return StatusTimeline
-  }
-
-  /**
-   * @override
-   */
-  get listenerClass() {
-    const {timelineType} = this.props
-
-    class _TimelineListener extends TimelineListener {
-      addListener(key, token) {
-        const websocketUrl = token.instance.makeStreamingAPIUrl(
-          token,
-          TIMELINE_TO_STREAM_MAP[timelineType]
-        )
-        super.addListener(key, token, websocketUrl)
-      }
-    }
-    return _TimelineListener
-  }
-
-  /**
-   * @override
-   */
-  makeLoaderForToken(timeline, token) {
-    const {timelineType} = this.props
-
-    // load timeline
-    return makeTimelineLoader(timelineType, timeline, token, this.db)
-  }
 
   // cb
+
+
   onChangeTimelineFilter(type) {
+    const {column: {params: {subject, timelineType}}, onUpdateTimelineFilter} = this.props
     const {filters} = this.state
     const newValue = !filters.get(type)
 
     filters.set(type, newValue)
     this.setState({filters})
 
-    this.timeline.updateFilter(filters)
-    this.subtimeline && this.subtimeline.updateFilter(filters)
+    onUpdateTimelineFilter(filters)
 
     localStorage.setItem(
-      storageKeyForFilter(type, this.props.subject, this.props.timelineType),
+      storageKeyForFilter(type, subject, timelineType),
       newValue)
+  }
+
+  onScrollNodeLoaded(el) {
+    this.scrollNode = el
+  }
+
+  onLoadMoreStatuses() {
+    this.props.onLoadMoreStatuses()
+  }
+
+  onClickHeader() {
+    const {column, onClickHeader} = this.props
+    const node = findDOMNode(this)
+
+    if(node instanceof HTMLElement) {
+      if(this.scrollNode != null) {
+        onClickHeader(column, node, this.scrollNode)
+      } else {
+        onClickHeader(column, node, undefined)
+      }
+    }
+  }
+
+  onClickMenuButton(e) {
+    e.stopPropagation()
+    this.setState({isMenuVisible: !this.state.isMenuVisible})
   }
 }
 require('./').registerColumn(COLUMN_TIMELINE, TimelineColumn)

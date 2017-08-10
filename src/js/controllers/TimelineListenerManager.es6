@@ -4,6 +4,8 @@ import {List} from 'immutable'
 import {
   COLUMN_NOTIFICATIONS,
   MAX_STATUSES,
+  STREAM_HOME, STREAM_LOCAL, STREAM_FEDERATION,
+  TIMELINE_FEDERATION, TIMELINE_LOCAL, TIMELINE_HOME,
 } from 'src/constants'
 import ChangeEventEmitter from 'src/utils/EventEmitter'
 import TimelineData, {NotificationRef, StatusRef} from 'src/infra/TimelineData'
@@ -17,6 +19,7 @@ import {
   AccountTimelineLoader,
   NotificationTimelineLoader,
   HashtagTimelineLoader,
+  makeTimelineLoader,
 } from 'src/controllers/TimelineLoader'
 import TokenListener from 'src/controllers/TokenListener'
 import {OAuthToken, UIColumn} from 'src/models'
@@ -39,6 +42,13 @@ type Loader =
   | HashtagTimelineLoader
 
 type LoaderInfo = {|loader: Loader, loading: boolean|}
+
+
+const TIMELINE_TO_STREAM_MAP = {
+  [TIMELINE_HOME]: STREAM_HOME,
+  [TIMELINE_LOCAL]: STREAM_LOCAL,
+  [TIMELINE_FEDERATION]: STREAM_FEDERATION,
+}
 
 
 export class TimelineModel {
@@ -93,23 +103,35 @@ class TimelineListenerManager extends ChangeEventEmitter {
   }
 
   onSubscribeListener(column: UIColumn) {
-    const {key, type, params: {subject}} = column
+    const {key, type, params: {subject, timelineType}} = column
+    let timeline: Timeline
+    let listener: Listener
 
     if(type === COLUMN_NOTIFICATIONS) {
-      const timeline = new NotificationTimeline(MAX_STATUSES)
-      const listener = new NotificationListener(timeline, this.db)
-
-      this.listeners.set(key, listener)
-      this.timelines.set(key, timeline)
-      this.listenerRemovers.set(key, [
-        timeline.onChange(this.onTimelineChanged.bind(this, column)),
-        this.db.registerTimeline(timeline),
-      ])
-      this.isLoadingStatuses.set(key, true)
-      this._isScrollLockedStatuses.set(key, false)
+      timeline = new NotificationTimeline(MAX_STATUSES)
+      listener = new NotificationListener(timeline, this.db)
     } else {
-      // TODO: for TimelineColumn
+      class _TimelineListener extends TimelineListener {
+        addListener(key, token) {
+          const websocketUrl = token.instance.makeStreamingAPIUrl(
+            token,
+            TIMELINE_TO_STREAM_MAP[timelineType]
+          )
+          super.addListener(key, token, websocketUrl)
+        }
+      }
+      timeline = new StatusTimeline(MAX_STATUSES)
+      listener = new _TimelineListener(timeline, this.db)
     }
+
+    this.listeners.set(key, listener)
+    this.timelines.set(key, timeline)
+    this.listenerRemovers.set(key, [
+      timeline.onChange(this.onTimelineChanged.bind(this, column)),
+      this.db.registerTimeline(timeline),
+    ])
+    this.isLoadingStatuses.set(key, true)
+    this._isScrollLockedStatuses.set(key, false)
 
     const tokenListener = new TokenListener(subject, {
       onTokenAdded: this.onTokenAdded.bind(this, column),
@@ -162,7 +184,7 @@ class TimelineListenerManager extends ChangeEventEmitter {
 
       const loader = this._makeLoader(column, timeline, newToken)
 
-      loader && loader.loadInitial()
+      loader.loadInitial()
     }
   }
 
@@ -236,15 +258,14 @@ class TimelineListenerManager extends ChangeEventEmitter {
     this.emit(this.EVENT_CHANGE, columnKey, model)
   }
 
-  _makeLoader(column: UIColumn, timeline: Timeline, token: OAuthToken): ?Loader {
+  _makeLoader(column: UIColumn, timeline: Timeline, token: OAuthToken): Loader {
     const {type} = column
 
     if(type == COLUMN_NOTIFICATIONS) {
       return new NotificationTimelineLoader(timeline, token, this.db)
     } else {
-      // TODO: for TimelineColumn
+      return makeTimelineLoader(column.params.timelineType, timeline, token, this.db)
     }
-    return undefined
   }
 
   _updateLoadingStatus(column: UIColumn) {
@@ -349,6 +370,15 @@ class TimelineListenerManager extends ChangeEventEmitter {
         this.emitChange(key, model)
       }
     }
+  }
+
+  onUpdateTimelineFilter(column: UIColumn, filters: Map<string, boolean>) {
+    const {key} = column
+    const timeline = this.timelines.get(key)
+    const subtimeline = this.subtimelines.get(key)
+
+    timeline && timeline.updateFilter(filters)
+    subtimeline && subtimeline.updateFilter(filters)
   }
 }
 
