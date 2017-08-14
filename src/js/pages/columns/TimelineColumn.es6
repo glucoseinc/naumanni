@@ -140,7 +140,11 @@ export default class TimelineColumn extends React.Component {
     const {formatMessage} = this.context.intl
 
     if(this.isMixedTimeline) {
-      return formatMessage({id: `column.title.united_timeline_${timelineType}`})
+      return (
+        <h1 className="column-headerTitle">
+          <_FM id={`column.title.united_timeline_${timelineType}`} />
+        </h1>
+      )
     } else {
       const {token} = this.props
       const typeName = formatMessage({id: `column.title.timeline_${timelineType}`})
