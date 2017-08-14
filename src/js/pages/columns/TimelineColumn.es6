@@ -251,4 +251,3 @@ export default class TimelineColumn extends React.Component {
     this.setState({isMenuVisible: !this.state.isMenuVisible})
   }
 }
-require('./').registerColumn(COLUMN_TIMELINE, TimelineColumn)
