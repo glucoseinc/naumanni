@@ -286,6 +286,9 @@ class TimelineListenerManager extends ChangeEventEmitter {
   }
 
   _updateLoadingStatus(column: UIColumn) {
+    // 本来は単にisTailLoadingを更新する用のメソッドだが、
+    // TimelineModelでラップしてemitChangeするI/Fにしてるせいで
+    // subtimelineモード/通常timelineモードを意識して記述しないといけないことになってて微妙。
     const {key} = column
     const loaderInfos = this.loaderInfos.get(key)
     const isTailLoading = loaderInfos != null &&
@@ -294,6 +297,16 @@ class TimelineListenerManager extends ChangeEventEmitter {
     this.isTailLoadingStatuses.set(key, isTailLoading)
 
     const isLoading = this.isLoadingStatuses.get(key)
+    const subtimeline = this.subtimelines.get(key)
+
+    if(subtimeline != null) {
+      const model = new TimelineModel(isLoading, isTailLoading, subtimeline.timeline)
+
+      this.emitChange(key, model)
+
+      return
+    }
+
     const timeline = this.timelines.get(key)
 
     if(timeline != null) {
