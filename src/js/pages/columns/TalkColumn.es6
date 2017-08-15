@@ -17,6 +17,7 @@ import {TalkBlock} from 'src/controllers/TalkListener'
 import TalkGroup, {TalkGroupModel} from 'src/pages/components/TalkGroup'
 import TalkForm from 'src/pages/components/TalkForm'
 import {ColumnHeader, ColumnHeaderMenu, NowLoading} from '../parts'
+import TalkListenerManager, {TalkModel} from 'src/controllers/TalkListenerManager'
 
 
 type Props = {
@@ -84,6 +85,21 @@ export default class TalkColumn extends React.Component {
    */
   componentDidMount() {
     this.props.onSubscribeListener()
+
+    //
+    const {key, params: {from}} = column
+    const columnModel = this.state.talkColumnModels.get(key) || new TalkModel()
+    const {context} = this.context
+    const {tokenState} = context.getState()
+    const token = tokenState.getTokenByAcct(from)
+    const props = {
+      ...this.defaultPropsForColumn(column),
+      token,
+      ...columnModel.toProps(),
+      onClickHashTag: (tag) => this.actionDelegate.onClickHashTag(tag),
+      onSubscribeListener: () => TalkListenerManager.onSubscribeListener(token, column),
+      onUnsubscribeListener: () => TalkListenerManager.onUnsubscribeListener(column),
+    }
   }
 
   /**
@@ -343,3 +359,6 @@ export default class TalkColumn extends React.Component {
     this.props.onClickHashTag(tag)
   }
 }
+
+
+ColumnFactory.register(COLUMN_TALK, TalkColumn)

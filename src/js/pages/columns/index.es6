@@ -1,11 +1,6 @@
 /* @flow */
 import React from 'react'
 import {UIColumn} from 'src/models'
-import FriendsColumn from './FriendsColumn'
-import HashTagColumn from './HashTagColumn'
-import NotificationsColumn from './NotificationsColumn'
-import TalkColumn from './TalkColumn'
-import TimelineColumn from './TimelineColumn'
 
 type Column =
   | FriendsColumn
@@ -14,21 +9,31 @@ type Column =
   | TalkColumn
   | TimelineColumn
 
-type FactoryFunction = (column: UIColumn) => React.Element<Column>
+type FactoryFunction = (...props) => React.Element<Column>
 
 
-class ColumnFactory {
+class ColumnRenderer {
   _factories: Map<string, FactoryFunction> = new Map()
 
-  register(type: string, f: FactoryFunction) {
+  register(type: string, kls: FactoryFunction) {
     this._factories.set(type, f)
   }
 
-  create(column: UIColumn): ?React.Element<Column> {
-    const f = this._factories.get(column.type)
+  render(column: UIColumn, ...props): ?React.Element<Column> {
+    const kls = this._factories.get(column.type)
+    assert(kls != null)
 
-    return f != null ? f(column) : null
+    return kls(...props)
   }
 }
 
-export default new ColumnFactory()
+export default new ColumnRenderer()
+
+// import sub columns
+// TODO: Webpackのお便利機能を使う
+import FriendsColumn from 'src/pages/columns/FriendsColumn'
+import HashTagColumn from 'src/pages/columns/HashTagColumn'
+import NotificationsColumn from 'src/pages/columns/NotificationsColumn'
+import TalkColumn from 'src/pages/columns/TalkColumn'
+import TimelineColumn from 'src/pages/columns/TimelineColumn'
+

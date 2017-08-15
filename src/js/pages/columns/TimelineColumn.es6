@@ -16,6 +16,7 @@ import {StatusRef} from 'src/infra/TimelineData'
 import {OAuthToken, UIColumn} from 'src/models'
 import {ColumnHeader, ColumnHeaderMenu, NowLoading} from 'src/pages/parts'
 import PagingColumnContent from 'src/pages/components/PagingColumnContent'
+import TimelineListenerManager, {TimelineModel} from 'src/controllers/TimelineListenerManager'
 
 
 const TIMELINE_FILTER_TEXT_MAP = {
@@ -251,3 +252,6 @@ export default class TimelineColumn extends React.Component {
     this.setState({isMenuVisible: !this.state.isMenuVisible})
   }
 }
+
+
+ColumnFactory.register(COLUMN_TIMELINE, TimelineColumn)

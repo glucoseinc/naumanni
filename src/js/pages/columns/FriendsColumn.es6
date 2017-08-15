@@ -13,7 +13,8 @@ import AccountRow from '../components/AccountRow'
 import {fuzzy_match as fuzzyMatch} from 'src/libs/fts_fuzzy_match'
 import {ColumnHeader, ColumnHeaderMenu, NowLoading} from '../parts'
 import FriendsListener, {UIFriend} from 'src/controllers/FriendsListener'
-
+import FriendsListenerManager, {FriendsModel} from 'src/controllers/FriendsListenerManager'
+import ColumnRenderer from './'
 
 type Props = {
   column: UIColumn,
@@ -68,6 +69,19 @@ export default class FriendsColumn extends React.Component {
    */
   componentDidMount() {
     this.props.onSubscribeListener()
+
+    //
+    const {context} = this.context
+    const {key, params: {subject}} = column
+    const columnModel = this.state.friendsColumnModels.get(key) || new FriendsModel()
+    const token = context.getState().tokenState.getTokenByAcct(subject)
+    const props = {
+      ...this.defaultPropsForColumn(column),
+      ...columnModel.toProps(),
+      token,
+      onSubscribeListener: () => FriendsListenerManager.onSubscribeListener(token, column),
+      onUnsubscribeListener: () => FriendsListenerManager.onUnsubscribeListener(column),
+    }
   }
 
   /**
@@ -231,3 +245,6 @@ export default class FriendsColumn extends React.Component {
     this.setState({filter, sortedFriends})
   }
 }
+
+
+ColumnRenderer.register(COLUMN_FRIENDS, FriendsColumn)
