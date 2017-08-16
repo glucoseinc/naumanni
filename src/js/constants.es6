@@ -25,6 +25,8 @@ export const DIALOG_GLOBAL_PREFERENCES = 'preferences'
 export const DIALOG_USER_DETAIL = 'userDetail'
 export const DIALOG_WELCOME = 'welcome'
 
+export const DRAG_SOURCE_COLUMN = 'Column'
+
 export const SUBJECT_MIXED = '!!__SUBJECT_MIXED__!!'   // Symbolだとjsonizeできないのでダメ
 
 export const VISIBLITY_DIRECT = 'direct'
