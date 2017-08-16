@@ -81,7 +81,7 @@
     opacity: 1;
     padding: $marginDefault;
     visibility: visible;
-    transition: max-height 200ms ease-in-out, opacity 200ms linear, padding 200ms linear, visibility 200ms linear;
+    transition: max-height 200ms ease-in-out, opacity 200ms linear, padding 200ms linear;
 
     &.collapsed {
       max-height: 0;
